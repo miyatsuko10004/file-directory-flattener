@@ -37,40 +37,42 @@ SOURCE_DIR = r"C:\Users\YourName\Documents\TargetData"
 
 # 2. まとめたファイルを保存するディレクトリ
 DEST_DIR = r"C:\Users\YourName\Documents\FlattenedOutput"
-
+```
 
 3. 実行
 ターミナル（PowerShell / Command Prompt / Bash）で以下のコマンドを実行します。
 uv を使用する場合（推奨）:
 必要なライブラリ（tqdm）が自動でセットアップされ、実行されます。
 
-
+```
 uv run flatten.py
+```
 
 標準の Python を使用する場合:
 事前にライブラリを入れる必要があります。
-
+```
 pip install tqdm
 python flatten.py
-
+```
 
 カスタマイズ
 対象ファイルを増やしたい
 スクリプト内の target_extensions を編集してください。
-
+```
 # 例: PDFとWordも追加する場合
 target_extensions = {'.xlsx', '.xls', '.pptx', '.ppt', '.pdf', '.docx'}
+```
 
 コピーではなく「移動」したい
 デフォルトでは安全のため「コピー」になっています。元ファイルを削除して移動させたい場合は、スクリプト内の shutil.copy2 を shutil.move に書き換えてください。
 
-
+```
 # 変更前
 shutil.copy2(file_path, dest_file_path)
 
 # 変更後
 shutil.move(file_path, dest_file_path)
-
+```
 
 注意事項
 • パスの長さ制限 (Windows):
