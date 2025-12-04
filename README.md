@@ -36,7 +36,7 @@ SOURCE_DIR = r"C:\Users\YourName\Documents\TargetData"
 DEST_DIR = r"C:\Users\YourName\Documents\FlattenedOutput"
 ```
 
-3. 実行
+### 3. 実行
 ターミナル（PowerShell / Command Prompt / Bash）で以下のコマンドを実行します。
 uv を使用する場合（推奨）:
 必要なライブラリ（tqdm）が自動でセットアップされ、実行されます。
@@ -52,15 +52,15 @@ pip install tqdm
 python flatten.py
 ```
 
-カスタマイズ
-対象ファイルを増やしたい
+## カスタマイズ
+### 対象ファイルを増やしたい
 スクリプト内の target_extensions を編集してください。
 ```
 # 例: PDFとWordも追加する場合
 target_extensions = {'.xlsx', '.xls', '.pptx', '.ppt', '.pdf', '.docx'}
 ```
 
-コピーではなく「移動」したい
+### コピーではなく「移動」したい
 デフォルトでは安全のため「コピー」になっています。元ファイルを削除して移動させたい場合は、スクリプト内の shutil.copy2 を shutil.move に書き換えてください。
 
 ```
@@ -71,7 +71,7 @@ shutil.copy2(file_path, dest_file_path)
 shutil.move(file_path, dest_file_path)
 ```
 
-【高速化】事前スキャンをスキップしたい
+### 【高速化】事前スキャンをスキップしたい
 ファイル数が数十万件あり、最初のスキャン（数え上げ）待ち時間をなくして即座にコピーを開始したい場合は、スクリプトの 3. 【事前スキャン】 から 4. 【本処理】 のループ部分を以下のコードに置き換えてください。
 ※ この場合、進捗バーは「％」や「残り時間」が出なくなり、「処理件数」のカウントアップのみになります。
 ```python
@@ -94,7 +94,7 @@ shutil.move(file_path, dest_file_path)
             tqdm.write(f"[エラー] {file_path.name}: {e}")
 ```
 
-注意事項
+## 注意事項
 • パスの長さ制限 (Windows):
 階層が非常に深く、かつ日本語の長いフォルダ名などが連結されると、Windowsのパス長制限（約260文字）を超える可能性があります。その場合、出力先フォルダをドライブ直下（例: C:\Data）にするなどして調整してください。
 • 同名ファイルの扱い:
