@@ -1,6 +1,3 @@
-# file-directory-formatter-
-複数階層にわかれたフォルダとファイル群を全て一意のディレクトリにまとめる
-
 # Directory Flattener (ファイル階層フラット化ツール)
 
 ## 概要
