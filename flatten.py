@@ -64,12 +64,19 @@ def flatten_directory_files(source_path, dest_path):
             # フォルダ区切りをアンダースコアに変換 (例: dir1_dir2_file.xlsx)
             new_filename = "_".join(relative_path.parts)
             
-            # 出力先パス
+            # 出力先パスの生成（衝突時は連番を付与）
+            base_name = new_filename
+            counter = 1
             dest_file_path = dest_dir / new_filename
-
-            # 衝突チェック
-            if new_filename in seen_filenames:
-                tqdm.write(f"[警告] ファイル名が重複しています: {new_filename} (元: {file_path})")
+            
+            while new_filename in seen_filenames or dest_file_path.exists():
+                # 拡張子を分離
+                stem = Path(base_name).stem
+                suffix = Path(base_name).suffix
+                new_filename = f"{stem}_{counter}{suffix}"
+                dest_file_path = dest_dir / new_filename
+                counter += 1
+            
             seen_filenames.add(new_filename)
 
             # コピー実行 (移動したい場合は shutil.move に変更)
