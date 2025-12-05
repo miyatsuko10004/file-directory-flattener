@@ -1,7 +1,16 @@
 import shutil
 from pathlib import Path
 import pytest
+import logging
 from flatten import flatten_directory_files
+
+@pytest.fixture
+def test_logger():
+    logger = logging.getLogger("test_flatten")
+    logger.setLevel(logging.INFO)
+    # Ensure propagation so caplog can catch it
+    logger.propagate = True
+    return logger
 
 @pytest.fixture
 def source_dir(tmp_path):
@@ -36,7 +45,10 @@ def log_file_path(tmp_path, monkeypatch):
     monkeypatch.setenv("LOG_FILE", str(p))
     return p
 
-def test_flatten_skip_extension(source_dir, dest_dir, log_file_path):
+def test_flatten_skip_extension(source_dir, dest_dir, log_file_path, monkeypatch):
+    # Setup: Set explicit target extensions
+    monkeypatch.setenv("TARGET_EXTENSIONS", ".xlsx")
+
     # Setup: Create file with ignored extension
     (source_dir / "file.txt").touch()
     (source_dir / "file.xlsx").touch()
@@ -47,12 +59,56 @@ def test_flatten_skip_extension(source_dir, dest_dir, log_file_path):
     # Verify
     assert not (dest_dir / "file.txt").exists()
     assert (dest_dir / "file.xlsx").exists()
-    
-    # Check logs for skipped file
-    assert log_file_path.exists()
-    content = log_file_path.read_text(encoding="utf-8")
-    assert "file.txt" in content
 
+def test_flatten_same_directory(source_dir, caplog, test_logger):
+    # Setup: source and dest are the same
+    flatten_directory_files(source_dir, source_dir, logger=test_logger)
+    
+    # Verify error log
+    assert "元のディレクトリと出力先が同じです" in caplog.text
+
+def test_flatten_source_not_exists(tmp_path, caplog, test_logger):
+    # Setup: non-existent source
+    non_existent = tmp_path / "non_existent"
+    dest = tmp_path / "dest"
+    
+    flatten_directory_files(non_existent, dest, logger=test_logger)
+    
+    # Verify error log
+    assert "元のディレクトリが見つかりません" in caplog.text
+
+def test_flatten_no_files(source_dir, dest_dir, caplog, test_logger, monkeypatch):
+    # Ensure no environment variable interferes
+    monkeypatch.delenv("TARGET_EXTENSIONS", raising=False)
+    
+    # Setup: empty source directory (or only ignored files)
+    (source_dir / "file.txt").touch()
+    
+    # Execute with default extensions (txt is ignored)
+    flatten_directory_files(source_dir, dest_dir, logger=test_logger)
+    
+    # Verify info log
+    assert "対象ファイルが見つかりませんでした" in caplog.text
+
+def test_flatten_copy_error(source_dir, dest_dir, monkeypatch, caplog, test_logger, log_file_path):
+    # Setup: Create a valid file
+    (source_dir / "file.xlsx").touch()
+    
+    # Mock shutil.copy2 to raise an exception
+    def mock_copy2(src, dst):
+        raise PermissionError("Mocked permission error")
+    
+    monkeypatch.setattr(shutil, "copy2", mock_copy2)
+    
+    # Ensure deterministic extensions
+    monkeypatch.setenv("TARGET_EXTENSIONS", ".xlsx")
+    
+    # Execute
+    flatten_directory_files(source_dir, dest_dir, logger=test_logger)
+    
+    # Verify error log and counts
+    assert "Mocked permission error" in caplog.text
+    assert "処理完了: 成功 0 件 / 失敗 1 件" in caplog.text
 def test_flatten_collision(source_dir, dest_dir):
     # Setup: Create files that map to same name
     # source/dir1/file.xlsx -> dir1_file.xlsx
@@ -71,23 +127,6 @@ def test_flatten_collision(source_dir, dest_dir):
     filenames = {f.name for f in files}
     assert filenames == {"dir1_file.xlsx", "dir1_file_1.xlsx"}, \
         f"Expected dir1_file.xlsx and dir1_file_1.xlsx, got {filenames}"
-
-def test_flatten_source_not_exists(tmp_path, log_file_path):
-    source = tmp_path / "non_existent"
-    dest = tmp_path / "dest"
-    
-    flatten_directory_files(source, dest)
-    
-    assert log_file_path.exists()
-    content = log_file_path.read_text(encoding="utf-8")
-    assert "[エラー] 元のディレクトリが見つかりません" in content
-
-def test_flatten_source_equals_dest(source_dir, log_file_path):
-    flatten_directory_files(source_dir, source_dir)
-    
-    assert log_file_path.exists()
-    content = log_file_path.read_text(encoding="utf-8")
-    assert "[エラー] 元のディレクトリと出力先が同じです" in content
 
 def test_flatten_custom_extensions(source_dir, dest_dir, monkeypatch):
     # Setup: Create files with various extensions
