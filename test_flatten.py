@@ -58,9 +58,12 @@ def test_flatten_collision(source_dir, dest_dir):
     flatten_directory_files(source_dir, dest_dir)
     
     # Verify
-    # One should be dir1_file.xlsx, the other dir1_file_1.xlsx
-    assert (dest_dir / "dir1_file.xlsx").exists()
-    assert (dest_dir / "dir1_file_1.xlsx").exists()
+    # Both files should exist, one with original name and one with _1 suffix
+    files = list(dest_dir.glob("*.xlsx"))
+    assert len(files) == 2, "Should have exactly 2 files"
+    filenames = {f.name for f in files}
+    assert filenames == {"dir1_file.xlsx", "dir1_file_1.xlsx"}, \
+        f"Expected dir1_file.xlsx and dir1_file_1.xlsx, got {filenames}"
 
 def test_flatten_source_not_exists(tmp_path, capsys):
     source = tmp_path / "non_existent"
