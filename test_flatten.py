@@ -90,12 +90,12 @@ def test_flatten_no_files(source_dir, dest_dir, caplog, test_logger, monkeypatch
     # Verify info log
     assert "対象ファイルが見つかりませんでした" in caplog.text
 
-def test_flatten_copy_error(source_dir, dest_dir, monkeypatch, caplog, test_logger, log_file_path):
+def test_flatten_copy_error(source_dir, dest_dir, monkeypatch, caplog, test_logger):
     # Setup: Create a valid file
     (source_dir / "file.xlsx").touch()
     
     # Mock shutil.copy2 to raise an exception
-    def mock_copy2(src, dst):
+    def mock_copy2(_src, _dst):
         raise PermissionError("Mocked permission error")
     
     monkeypatch.setattr(shutil, "copy2", mock_copy2)
