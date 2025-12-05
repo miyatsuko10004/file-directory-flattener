@@ -2,12 +2,15 @@
 # requires-python = ">=3.10"
 # dependencies = [
 #     "tqdm",
+#     "python-dotenv",
 # ]
 # ///
 
 import shutil
+import os
 from pathlib import Path
 from tqdm import tqdm
+from dotenv import load_dotenv
 
 def flatten_directory_files(source_path, dest_path):
     """
@@ -38,7 +41,7 @@ def flatten_directory_files(source_path, dest_path):
     # tqdmで正確なバーを出すために、イテレータではなく一度リストにします
     files_to_process = []
     skipped_files = []
-    
+
     # rglob('*') は日本語ファイル名も深い階層もすべて取得します
     for p in source_dir.rglob('*'):
         if p.is_file():
@@ -64,15 +67,15 @@ def flatten_directory_files(source_path, dest_path):
         try:
             # 相対パスを取得 (例: dir1/dir2/file.xlsx)
             relative_path = file_path.relative_to(source_dir)
-            
+
             # フォルダ区切りをアンダースコアに変換 (例: dir1_dir2_file.xlsx)
             new_filename = "_".join(relative_path.parts)
-            
+
             # 出力先パスの生成（衝突時は連番を付与）
             base_name = new_filename
             counter = 1
             dest_file_path = dest_dir / new_filename
-            
+
             while new_filename in seen_filenames or dest_file_path.exists():
                 # 拡張子を分離
                 stem = Path(base_name).stem
@@ -80,7 +83,7 @@ def flatten_directory_files(source_path, dest_path):
                 new_filename = f"{stem}_{counter}{suffix}"
                 dest_file_path = dest_dir / new_filename
                 counter += 1
-            
+
             seen_filenames.add(new_filename)
 
             # コピー実行 (移動したい場合は shutil.move に変更)
@@ -103,14 +106,20 @@ def flatten_directory_files(source_path, dest_path):
             print(f"{p}")
 
 # ==========================================
-# 設定エリア (Windowsのパスは r"..." で囲んでください)
+# 設定エリア
 # ==========================================
 
+# .env から設定を読み込み
+load_dotenv()
+
 # 1. 元のファイルが入っているディレクトリ
-SOURCE_DIR = r"C:\Users\Username\Documents\Data_Original"
+SOURCE_DIR = os.getenv("SOURCE_DIR")
 
 # 2. まとめたファイルを保存するディレクトリ
-DEST_DIR = r"C:\Users\Username\Documents\Data_Flattened"
+DEST_DIR = os.getenv("DEST_DIR")
 
 if __name__ == "__main__":
-    flatten_directory_files(SOURCE_DIR, DEST_DIR)
+    if not SOURCE_DIR or not DEST_DIR:
+        print("[エラー] .env ファイルに SOURCE_DIR と DEST_DIR を設定してください。")
+    else:
+        flatten_directory_files(SOURCE_DIR, DEST_DIR)
