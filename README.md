@@ -9,38 +9,42 @@
 * **階層構造の維持**: `dir1/dir2/file.xlsx` → `dir1_dir2_file.xlsx` のようにリネームするため、元の場所がわかる。
 * **日本語対応**: フォルダ名やファイル名に日本語が含まれていても問題なく動作。
 * **進捗表示**: `tqdm` を使用し、処理の進捗状況をプログレスバーで表示。
+* **ログ出力**: 処理結果やエラー、スキップされたファイルの情報はログファイル（デフォルト: `flatten.log`）に出力。
+* **設定の外部化**: `.env` ファイルで対象拡張子やログファイル名を変更可能。
 * **依存管理**: `uv` のスクリプト実行機能に対応しており、手動でのライブラリインストール不要。
-* **ログ出力**: 拡張子が対象外でスキップされたファイルがある場合、処理完了後に一覧を表示。
 
 ## 動作環境
 * Python 3.10 以上
 * [uv](https://github.com/astral-sh/uv) (推奨)
-* `uv` がない場合は標準の `pip` で `tqdm` をインストールしても動作。
+* `uv` がない場合は標準の `pip` で `tqdm`, `python-dotenv` をインストールしても動作。
 
 ## 使い方
 
 ### 1. 準備
-このディレクトリに `flatten.py`（Pythonスクリプト）を配置。
+このディレクトリに `flatten.py`（Pythonスクリプト）と `.env` ファイルを配置。
+`.env.example` をコピーして `.env` を作成し、環境に合わせて設定を変更する。
 
-### 2. 設定
-`flatten.py` をテキストエディタで開き、ファイル最下部の設定エリアを修正。
+### 2. 設定 (.env)
+`.env` ファイルをテキストエディタで開き、各項目を設定。
 
-```python
-# ==========================================
-# 設定エリア
-# ==========================================
-
+```bash
 # 1. 元のファイルが入っているディレクトリ (絶対パス推奨)
-SOURCE_DIR = r"C:\Users\YourName\Documents\TargetData"
+SOURCE_DIR="C:\Users\YourName\Documents\TargetData"
 
 # 2. まとめたファイルを保存するディレクトリ
-DEST_DIR = r"C:\Users\YourName\Documents\FlattenedOutput"
+DEST_DIR="C:\Users\YourName\Documents\FlattenedOutput"
+
+# 3. 対象拡張子 (カンマ区切り、指定しない場合はデフォルト: .xlsx,.xls,.pptx,.ppt)
+TARGET_EXTENSIONS=".xlsx,.xls,.pptx,.ppt"
+
+# 4. ログファイル名 (指定しない場合はデフォルト: flatten.log)
+LOG_FILE="flatten.log"
 ```
 
 ### 3. 実行
 ターミナル（PowerShell / Command Prompt / Bash）で以下のコマンドを実行。
 uv を使用する場合（推奨）:
-必要なライブラリ（tqdm）が自動でセットアップされ、実行。
+必要なライブラリ（tqdm, python-dotenv）が自動でセットアップされ、実行。
 
 ```bash
 uv run flatten.py
@@ -50,21 +54,21 @@ uv run flatten.py
 事前にライブラリを入れる必要がある。
 
 ```bash
-pip install tqdm
+pip install tqdm python-dotenv
 python flatten.py
 ```
 
 ## カスタマイズ
 
 ### 対象ファイルを増やしたい
-スクリプト内の target_extensions を編集。
-```python
+`.env` ファイルの `TARGET_EXTENSIONS` を編集。
+```bash
 # 例: PDFとWordも追加する場合
-target_extensions = {'.xlsx', '.xls', '.pptx', '.ppt', '.pdf', '.docx'}
+TARGET_EXTENSIONS=".xlsx,.xls,.pptx,.ppt,.pdf,.docx"
 ```
 
 ### コピーではなく「移動」したい
-デフォルトでは安全のため「コピー」になっている。元ファイルを削除して移動させたい場合は、スクリプト内の shutil.copy2 を shutil.move に書き換える。
+デフォルトでは安全のため「コピー」になっている。元ファイルを削除して移動させたい場合は、スクリプト内の `shutil.copy2` を `shutil.move` に書き換える。
 
 ```python
 # 変更前
@@ -78,7 +82,7 @@ shutil.move(file_path, dest_file_path)
 ファイル数が数十万件あり、最初のスキャン（数え上げ）待ち時間をなくして即座にコピーを開始したい場合は、スクリプトの 3. 【事前スキャン】 から 4. 【本処理】 のループ部分を以下のコードに置き換える。
 ※ この場合、進捗バーは「％」や「残り時間」が出ない、「処理件数」のカウントアップのみになる。
 ```python
-    print("即時処理モードで開始します...")
+    logger.info("即時処理モードで開始します...")
 
     # ジェネレータ式を作成（メモリ展開せず、見つけ次第処理する）
     files_iterator = (
@@ -94,7 +98,7 @@ shutil.move(file_path, dest_file_path)
             dest_file_path = dest_dir / new_filename
             shutil.copy2(file_path, dest_file_path)
         except Exception as e:
-            tqdm.write(f"[エラー] {file_path.name}: {e}")
+            logger.error(f"[エラー] {file_path.name}: {e}")
 ```
 
 ## 注意事項
