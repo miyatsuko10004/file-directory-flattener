@@ -12,30 +12,56 @@ from pathlib import Path
 from tqdm import tqdm
 from dotenv import load_dotenv
 
+import logging
+
+def setup_logger():
+    log_file = os.getenv("LOG_FILE", "flatten.log")
+    logger = logging.getLogger("flatten")
+    logger.setLevel(logging.INFO)
+    
+    # Remove existing handlers to avoid duplicates or wrong file
+    if logger.hasHandlers():
+        logger.handlers.clear()
+    
+    handler = logging.FileHandler(log_file, encoding='utf-8')
+    formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    
+    # Prevent propagation to root logger (which might print to console)
+    logger.propagate = False
+    
+    return logger
+
 def flatten_directory_files(source_path, dest_path):
     """
     指定ディレクトリ以下を再帰的に探索し、
     階層構造をファイル名に反映させて1箇所にコピーします。
     """
+    logger = setup_logger()
     source_dir = Path(source_path)
     dest_dir = Path(dest_path)
 
     # 1. ソースディレクトリの確認
     if not source_dir.exists():
-        print(f"[エラー] 元のディレクトリが見つかりません: {source_dir}")
+        logger.error(f"[エラー] 元のディレクトリが見つかりません: {source_dir}")
         return
 
     if source_dir.resolve() == dest_dir.resolve():
-        print(f"[エラー] 元のディレクトリと出力先が同じです: {source_dir}")
+        logger.error(f"[エラー] 元のディレクトリと出力先が同じです: {source_dir}")
         return
 
     # 2. 出力先の作成
     dest_dir.mkdir(parents=True, exist_ok=True)
 
     # 対象拡張子 (必要に応じて追加してください)
-    target_extensions = {'.xlsx', '.xls', '.pptx', '.ppt'}
+    target_extensions_env = os.getenv("TARGET_EXTENSIONS")
+    if target_extensions_env:
+        target_extensions = {ext.strip() for ext in target_extensions_env.split(',')}
+    else:
+        target_extensions = {'.xlsx', '.xls', '.pptx', '.ppt'}
 
-    print("ファイル一覧をスキャン中... (ファイル数によっては数秒かかります)")
+    logger.info("ファイル一覧をスキャン中... (ファイル数によっては数秒かかります)")
 
     # 3. 【事前スキャン】総数を確定させる
     # tqdmで正確なバーを出すために、イテレータではなく一度リストにします
@@ -51,11 +77,11 @@ def flatten_directory_files(source_path, dest_path):
                 skipped_files.append(p)
 
     total_files = len(files_to_process)
-    print(f"スキャン完了: 対象ファイル {total_files} 件")
-    print("-" * 40)
+    logger.info(f"スキャン完了: 対象ファイル {total_files} 件")
+    logger.info("-" * 40)
 
     if total_files == 0:
-        print("対象ファイルが見つかりませんでした。終了します。")
+        logger.info("対象ファイルが見つかりませんでした。終了します。")
         return
 
     # 4. 【本処理】プログレスバー付きでコピー実行
@@ -92,18 +118,18 @@ def flatten_directory_files(source_path, dest_path):
 
         except Exception as e:
             # エラー時はバーを崩さずにログ出力
-            tqdm.write(f"[エラー] {file_path.name}: {e}")
+            logger.error(f"[エラー] {file_path.name}: {e}")
             error_count += 1
 
-    print("-" * 40)
-    print(f"処理完了: 成功 {success_count} 件 / 失敗 {error_count} 件")
-    print(f"保存先: {dest_dir}")
+    logger.info("-" * 40)
+    logger.info(f"処理完了: 成功 {success_count} 件 / 失敗 {error_count} 件")
+    logger.info(f"保存先: {dest_dir}")
 
     if skipped_files:
-        print("-" * 40)
-        print("【スキップされたファイル一覧】(拡張子対象外)")
+        logger.info("-" * 40)
+        logger.info("【スキップされたファイル一覧】(拡張子対象外)")
         for p in skipped_files:
-            print(f"{p}")
+            logger.info(f"{p}")
 
 # ==========================================
 # 設定エリア

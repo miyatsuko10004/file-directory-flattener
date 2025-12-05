@@ -4,3 +4,4 @@ __pycache__/
 .venv
 .serena/
 .pytest_cache/
+flatten.log
