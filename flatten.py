@@ -33,12 +33,14 @@ def setup_logger():
     
     return logger
 
-def flatten_directory_files(source_path, dest_path):
+def flatten_directory_files(source_path, dest_path, logger=None):
     """
     指定ディレクトリ以下を再帰的に探索し、
     階層構造をファイル名に反映させて1箇所にコピーします。
     """
-    logger = setup_logger()
+    if logger is None:
+        logger = setup_logger()
+    
     source_dir = Path(source_path)
     dest_dir = Path(dest_path)
 
@@ -135,16 +137,16 @@ def flatten_directory_files(source_path, dest_path):
 # 設定エリア
 # ==========================================
 
-# .env から設定を読み込み
-load_dotenv()
-
-# 1. 元のファイルが入っているディレクトリ
-SOURCE_DIR = os.getenv("SOURCE_DIR")
-
-# 2. まとめたファイルを保存するディレクトリ
-DEST_DIR = os.getenv("DEST_DIR")
-
 if __name__ == "__main__":
+    # .env から設定を読み込み
+    load_dotenv()
+
+    # 1. 元のファイルが入っているディレクトリ
+    SOURCE_DIR = os.getenv("SOURCE_DIR")
+
+    # 2. まとめたファイルを保存するディレクトリ
+    DEST_DIR = os.getenv("DEST_DIR")
+
     if not SOURCE_DIR or not DEST_DIR:
         print("[エラー] .env ファイルに SOURCE_DIR と DEST_DIR を設定してください。")
     else:
